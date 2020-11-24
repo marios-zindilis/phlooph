@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+
+flake8 . || exit 1
+black --check --diff . || exit 1
+coverage run -m pytest --verbose --maxfail 1
+coverage report --include "phlooph/*" --show-missing
+

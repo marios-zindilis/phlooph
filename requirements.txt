@@ -1,0 +1,7 @@
+markdown2
+ruamel.yaml
+jinja2
+pytest
+coverage
+flake8
+black

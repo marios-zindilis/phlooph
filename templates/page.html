@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+
+        {% for post in posts %}
+        <div class="card my-4">
+            {% if post.image %}
+              <img class="card-img-top" src="{{ post.url }}index.jpg" alt="Card image cap">
+            {% endif %}
+            <div class="card-body">
+                <a href="{{ post.url }}">
+                  <h2 class="card-title">{{ post.title }}</h2>
+                </a>
+
+                {% if post.excerpt %}
+                    <p class="card-text">
+                        {{ post.excerpt }}
+                    </p>
+                    <a href="{{ post.url }}" class="btn btn-primary">Read More &rarr;</a>
+                {% else %}
+                    <p class="card-text">
+                        {{ post.content }}
+                    </p>
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+              <span class="mr-2">
+                <b>Posted</b>: {{ post.date_published }}
+              </span>
+              {% if post.tags %}
+              <b>Tags</b>:
+              {% for tag in post.tags %}
+              <a href="/tags/{{ tag }}/">{{ tag }}</a>{{ ", " if not loop.last }}
+              {% endfor %}
+              {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <nav aria-label="page navigation">
+          <ul class="pagination justify-content-center mb-4">
+          {% for page in pages %}
+            {% if page == current_page %}
+              <li class="page-item active"><span class="page-link">{{ page }}</span></li>
+            {% else %}
+              {% if page == 0 %}
+                <li class="page-item"><a class="page-link" href="/">{{ page }}</a></li>
+              {% else %}
+                <li class="page-item"><a class="page-link" href="/pages/{{ page }}/">{{ page }}</a></li>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          </ul>
+        </nav>
+
+      </div> <!-- .col-md-8 -->
+
+      <!-- Sidebar Widgets Column -->
+      <div class="col-md-4">
+
+        <!-- TODO: SEARCH -->
+        <!-- <div class="card my-4">
+          <h5 class="card-header">Search</h5>
+          <div class="card-body">
+            <div class="input-group">
+              <input type="text" class="form-control" placeholder="Search for...">
+              <span class="input-group-append">
+                <button class="btn btn-secondary" type="button">Go!</button>
+              </span>
+            </div>
+          </div>
+        </div> -->
+
+        <div class="card my-4">
+          <h5 class="card-header">Tags</h5>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-12">
+              {% for tag in tags %}
+                <a href="/tags/{{ tag }}/">{{ tag }}</a>{{ ", " if not loop.last }}
+              {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- /.row -->
+
+  </div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            <h1 class="mt-4">{{ title }}</h1>
+            <hr>
+            <p>Posted on {{ date_published }}</p>
+            <hr>
+            {{ content }}
+        </div>
+
+        {% include "sidebar.html" %}
+
+    </div>
+    <!-- /.row -->
+
+  </div>
+{% endblock %}

@@ -1,2 +1,3 @@
 # phlooph
-a static website generator
+
+**phlooph** is a simple static website generator.
