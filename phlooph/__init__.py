@@ -7,6 +7,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import List, Optional
+import fnmatch
 
 import markdown2
 from jinja2 import Environment, FileSystemLoader
@@ -18,7 +19,13 @@ DESTINATION_DIR = HOME / "Code" / "marios-zindilis.github.io"
 POSTS_DIR = SOURCE_DIR / "posts"
 EXCERPT_SEPARATOR = "<!-- read more -->"  # separates the excerpt from the rest of the content
 POSTS_PER_PAGE = 10  # used to paginate posts into pages
-
+IGNORE = [  # list of files to be ignored during rendering, relative to SOURCE_DIR, passed to fnmatch.fnmatch()
+    "README.md",
+    "test",
+    "LICENSE",
+    ".git",
+    ".git/*",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -300,8 +307,8 @@ def create_directory(source: Path, destination: Path, dry_run: bool) -> None:
 
 def create_page_from_markdown(source: Path, destination: Path, dry_run: bool) -> None:
     """What we find markdown files in the source path, we render them into HTML."""
-    rendered_markdown = get_rendered_markdown(source)
     log(f"From markdown source {source} creating destination {destination}.", 1)
+    rendered_markdown = get_rendered_markdown(source)
     if not dry_run:
         destination.parents[0].mkdir(parents=True, exist_ok=True)
         destination.write_text(rendered_markdown)
@@ -314,8 +321,20 @@ def copy_verbatim(source: Path, destination: Path, dry_run: bool) -> None:
         destination.write_bytes(source.read_bytes())
 
 
+def is_source_ignored(source: Path) -> bool:
+    """Check if a source path should be ignored from processing."""
+    source_path_relative_to_source_dir = get_source_path_relative_to_source_dir(source)
+    for ignore_match in IGNORE:
+        if fnmatch.fnmatch(str(source_path_relative_to_source_dir), ignore_match):
+            return True
+    return False
+
+
 def process(source: Path, dry_run: bool) -> None:
     """Route each source file to its corresponding handler."""
+    if is_source_ignored(source):
+        log(f"Ignoring source {source}")
+        return
     destination = get_destination(source)
     if source.is_dir():
         create_directory(source, destination, dry_run)
@@ -339,8 +358,10 @@ def paginate(dry_run: bool) -> None:
     for page, posts in posts_by_page_number.items():
         if page == 0:
             page_path = DESTINATION_DIR / "index.html"
+            title = "Marios Zindilis"
         else:
             page_path = DESTINATION_DIR / "pages" / str(page) / "index.html"
+            title = f"Marios Zindilis - Page {page}"
 
         context = []
         for post in posts:
@@ -371,6 +392,7 @@ def paginate(dry_run: bool) -> None:
                     current_page=page,
                     pages=posts_by_page_number.keys(),
                     tags=tags,
+                    title=title,
                 )
             )
 
