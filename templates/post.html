@@ -2,18 +2,15 @@
 {% block content %}
 <div class="container">
     <div class="row">
-        <div class="col-lg-8">
-            <h1 class="mt-4">{{ title }}</h1>
-            <hr>
-            <p>Posted on {{ date_published }}</p>
-            <hr>
+        <article class="col">
+            <header>
+                <h1 class="mt-4">{{ title }}</h1>
+            </header>
             {{ content }}
-        </div>
-
-        {% include "sidebar.html" %}
-
-    </div>
-    <!-- /.row -->
-
-  </div>
+            <footer>
+                <p>Posted on {{ date_published }}</p>
+            </footer>
+        </article>
+    </div> <!-- .row -->
+  </div> <!-- .container -->
 {% endblock %}
