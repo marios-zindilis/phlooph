@@ -1,29 +1,40 @@
-<!-- Sidebar Widgets Column -->
 <div class="col-md-4">
-
-<!-- TODO: SEARCH -->
-<!-- <div class="card my-4">
-    <h5 class="card-header">Search</h5>
+  <div class="card my-4">
+    <h5 class="card-header">About</h5>
     <div class="card-body">
-    <div class="input-group">
-        <input type="text" class="form-control" placeholder="Search for...">
-        <span class="input-group-append">
-        <button class="btn btn-secondary" type="button">Go!</button>
-        </span>
+      <p>
+        Hello, I'm Marios Zindilis and this is my website. Opinions are my own. You also find me on
+        <a href="https://www.linkedin.com/in/zindilis" title="Marios Zindilis LinkedIn Profile">LinkedIn</a>
+        and <a href="https://github.com/marios-zindilis" title="Marios Zindilis GitHub Page">GitHub</a>.
+      </p>
+      <p class="mb-0">
+        Unless otherwise specified, content is licensed under
+        <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>.
+      </p>
     </div>
-    </div>
-</div> -->
+  </div>
 
-<div class="card my-4">
+    <!-- TODO: SEARCH -->
+    <!-- <div class="card my-4">
+        <h5 class="card-header">Search</h5>
+        <div class="card-body">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Search for...">
+            <span class="input-group-append">
+            <button class="btn btn-secondary" type="button">Go!</button>
+            </span>
+        </div>
+        </div>
+    </div> -->
+
+  <div class="card my-4">
     <h5 class="card-header">Tags</h5>
     <div class="card-body">
-    <div class="row">
-        <div class="col-md-12">
-        {% for tag in tags %}
+      <p class="card-text">
+      {% for tag in tags %}
         <a href="/tags/{{ tag }}/">{{ tag }}</a>{{ ", " if not loop.last }}
-        {% endfor %}
-        </div>
+      {% endfor %}
+      </p>
     </div>
-    </div>
-</div>
+  </div>
 </div>
