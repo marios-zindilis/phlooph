@@ -25,9 +25,11 @@
           {% endif %}
         </div><!-- .card-body -->
         <div class="card-footer text-muted">
-          <span class="mr-2">
-            <b>Posted</b>: {{ post.date_published }}
-          </span>
+          {% if post.date_published %}
+            <span class="mr-2">
+              <b>Posted</b>: {{ post.date_published }}
+            </span>
+          {% endif %}
           {% if post.tags %}
           <b>Tags</b>:
           {% for tag in post.tags %}

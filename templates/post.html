@@ -8,7 +8,7 @@
             </header>
             {{ content }}
             <footer>
-                <p>Posted on {{ date_published }}</p>
+                {% if date_published %}<p>Posted on {{ date_published }}</p>{% endif %}
             </footer>
         </article>
     </div> <!-- .row -->
