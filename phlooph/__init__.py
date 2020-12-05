@@ -25,6 +25,8 @@ IGNORE = [  # list of files to be ignored during rendering, relative to SOURCE_D
     "LICENSE",
     ".git",
     ".git/*",
+    "drafts",
+    "drafts/*",
 ]
 
 logger = logging.getLogger(__name__)
