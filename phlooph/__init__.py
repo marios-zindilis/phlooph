@@ -43,6 +43,9 @@ def get_args():
         help="-v logs informational messages, -vv logs debug as well",
     )
     argument_parser.add_argument("--dry-run", "-d", action="store_true", default=False)
+    argument_parser.add_argument("--skip-rendering", "-r", action="store_true", default=False)
+    argument_parser.add_argument("--skip-pagination", "-p", action="store_true", default=False)
+    argument_parser.add_argument("--skip-tagging", "-t", action="store_true", default=False)
     return argument_parser.parse_args()
 
 
@@ -404,6 +407,17 @@ def main():
 
     setup_logging(args.verbosity)
 
-    render(args.dry_run)
-    paginate(args.dry_run)
-    tag(args.dry_run)
+    if args.skip_rendering:
+        log("Skipping Rendering", 1)
+    else:
+        render(args.dry_run)
+
+    if args.skip_pagination:
+        log("Skipping Pagination", 1)
+    else:
+        paginate(args.dry_run)
+
+    if args.skip_tagging:
+        log("Skipping Tagging", 1)
+    else:
+        tag(args.dry_run)
