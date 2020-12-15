@@ -17,8 +17,10 @@ HOME = Path.home()
 SOURCE_DIR = HOME / "Code" / "website-sources"
 DESTINATION_DIR = HOME / "Code" / "marios-zindilis.github.io"
 POSTS_DIR = SOURCE_DIR / "posts"
+FEED_PATH = DESTINATION_DIR / "feeds" / "feed.xml"
 EXCERPT_SEPARATOR = "<!-- read more -->"  # separates the excerpt from the rest of the content
 POSTS_PER_PAGE = 10  # used to paginate posts into pages
+POSTS_IN_FEED = 20  # used to generate the RSS feed
 IGNORE = [  # list of files to be ignored during rendering, relative to SOURCE_DIR, passed to fnmatch.fnmatch()
     "README.md",
     "test",
@@ -46,6 +48,7 @@ def get_args():
     argument_parser.add_argument("--skip-rendering", "-r", action="store_true", default=False)
     argument_parser.add_argument("--skip-pagination", "-p", action="store_true", default=False)
     argument_parser.add_argument("--skip-tagging", "-t", action="store_true", default=False)
+    argument_parser.add_argument("--skip-feed", "-f", action="store_true", default=False)
     return argument_parser.parse_args()
 
 
@@ -241,6 +244,19 @@ def get_posts_by_page_number():
     return pages
 
 
+def get_posts_for_feed():
+    """Get the latest posts to be used in rendering the feed."""
+    posts_by_publication_date = get_posts_by_publication_date()
+    publication_dates = sorted(posts_by_publication_date, reverse=True)
+    posts_for_feed = []
+
+    for publication_date in publication_dates:
+        if len(posts_for_feed) >= POSTS_IN_FEED:
+            return posts_for_feed
+        for post in posts_by_publication_date[publication_date]:
+            posts_for_feed.append(post)
+
+
 def get_destination(source: Path) -> Path:
     """Given the path of a source file, return the destination path."""
     source_path_relative_to_source_dir = get_source_path_relative_to_source_dir(source)
@@ -402,6 +418,34 @@ def paginate(dry_run: bool) -> None:
             )
 
 
+def generate_feed(dry_run: bool) -> None:
+    posts_for_feed = get_posts_for_feed()
+    context = []
+
+    for post in posts_for_feed:
+        context.append(
+            {
+                "title": get_title(post),
+                "date_published": get_date_published(post),
+                "url": get_url(post),
+            }
+        )
+
+    # now render a jinja template with the context
+    file_system_loader = FileSystemLoader("templates")
+    environment = Environment(loader=file_system_loader)
+    template = environment.get_template("feed.xml")
+
+    if not dry_run:
+        FEED_PATH.parents[0].mkdir(parents=True, exist_ok=True)
+        FEED_PATH.write_text(
+            template.render(
+                last_build_date=datetime.datetime.now(),
+                posts=context,
+            )
+        )
+
+
 def main():
     args = get_args()
 
@@ -421,3 +465,8 @@ def main():
         log("Skipping Tagging", 1)
     else:
         tag(args.dry_run)
+
+    if args.skip_feed:
+        log("Skipping Feed", 1)
+    else:
+        generate_feed(args.dry_run)
