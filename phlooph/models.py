@@ -41,11 +41,21 @@ class Source:
         return self.path.match("*.md")
 
     @property
-    def destination(self):
+    def destination(self) -> Path:
         _destination = config.DESTINATION_DIR / self.path_relative_to_source_dir
         if self.is_md:
             return _destination.with_name("index.html")
         return _destination
+
+    @property
+    def parent_directory(self) -> Path:
+        return self.destination.parents[0]
+
+    def mkdir(self) -> None:
+        if self.is_dir:
+            self.destination.mkdir(parents=True, exist_ok=True)
+        else:
+            self.parent_directory.mkdir(parents=True, exist_ok=True)
 
 
 class Post(Source):

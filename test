@@ -2,6 +2,6 @@
 
 flake8 . || exit 1
 black --check --diff . || exit 1
-coverage run -m pytest --verbose --verbose --verbose --maxfail 1
+coverage run -m pytest --verbose --verbose --verbose --maxfail 1 -s
 coverage report --include "phlooph/*" --show-missing
 

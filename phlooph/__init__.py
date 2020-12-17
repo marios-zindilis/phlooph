@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Dict
 import fnmatch
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, Template
 
 from phlooph.models import Source, Post
 from phlooph import config
@@ -68,11 +68,15 @@ def log(message: str, verbosity: int = 0) -> None:
     logger.debug(f"{calling_function}{message}")
 
 
-def get_rendered_markdown(path: Path) -> str:
-    """Given the path of a source file, return it rendered as HTML."""
+def get_template(template: str) -> Template:
     file_system_loader = FileSystemLoader("templates")
     environment = Environment(loader=file_system_loader)
-    template = environment.get_template("post.html")
+    return environment.get_template(template)
+
+
+def get_rendered_markdown(path: Path) -> str:
+    """Given the path of a source file, return it rendered as HTML."""
+    template = get_template("post.html")
     post = Post(path)
     return template.render(
         content=post.html,
@@ -113,7 +117,7 @@ def get_posts_by_page_number():
     return pages
 
 
-def get_posts_for_feed():
+def get_posts_for_feed() -> List[Post]:
     """Get the latest posts to be used in rendering the feed."""
     posts_by_publication_date = get_posts_by_publication_date()
     publication_dates = sorted(posts_by_publication_date, reverse=True)
@@ -123,7 +127,7 @@ def get_posts_for_feed():
         if len(posts_for_feed) >= config.POSTS_IN_FEED:
             return posts_for_feed
         for post in posts_by_publication_date[publication_date]:
-            posts_for_feed.append(post)
+            posts_for_feed.append(Post(post))
 
 
 def get_post_image(source: Path) -> Optional[str]:
@@ -156,9 +160,7 @@ def create_page_per_tag(posts_by_tag: dict, dry_run: bool) -> None:
 
         tag_path = config.DESTINATION_DIR / "tags" / tag / "index.html"
         # now render a jinja template with the context
-        file_system_loader = FileSystemLoader("templates")
-        environment = Environment(loader=file_system_loader)
-        template = environment.get_template("tag.html")
+        template = get_template("tag.html")
         if not dry_run:
             tag_path.parents[0].mkdir(parents=True, exist_ok=True)
             tag_path.write_text(template.render(posts=posts, tag=tag))
@@ -167,9 +169,7 @@ def create_page_per_tag(posts_by_tag: dict, dry_run: bool) -> None:
 def create_tag_index(posts_by_tag: dict, dry_run: bool) -> None:
     """Given a dictionary of {tag: [posts]}, create a page with an index of all tags."""
     tags_path = config.DESTINATION_DIR / "tags" / "index.html"
-    file_system_loader = FileSystemLoader("templates")
-    environment = Environment(loader=file_system_loader)
-    template = environment.get_template("tags.html")
+    template = get_template("tags.html")
     if dry_run:
         tags_path.parents[0].mkdir(parents=True, exist_ok=True)
         tags_path.write_text(template.render(tags=posts_by_tag.keys()))
@@ -181,27 +181,22 @@ def tag(dry_run: bool) -> None:
     create_tag_index(posts_by_tag, dry_run)
 
 
-def create_directory(source: Path, destination: Path, dry_run: bool) -> None:
-    """When we find directories in the source path, we simply created them in the destination path."""
-    log(f"From source directory {source} creating destination {destination}.", 1)
-    if not dry_run:
-        destination.mkdir(parents=True, exist_ok=True)
-
-
-def create_page_from_markdown(path: Path, destination: Path, dry_run: bool) -> None:
+def create_page_from_markdown(source: Source, dry_run: bool) -> None:
     """When we find markdown files in the source path, we render them into HTML."""
-    log(f"From markdown source {path} creating destination {destination}.", 1)
-    rendered_markdown = get_rendered_markdown(path)
+    log(f"From markdown source {source.path} creating destination {source.destination}.", 1)
+    rendered_markdown = get_rendered_markdown(source.path)
     if not dry_run:
-        destination.parents[0].mkdir(parents=True, exist_ok=True)
-        destination.write_text(rendered_markdown)
+        # source.destination.parents[0].mkdir(parents=True, exist_ok=True)
+        source.mkdir()
+        source.destination.write_text(rendered_markdown)
 
 
-def copy_verbatim(source: Path, destination: Path, dry_run: bool) -> None:
+def copy_verbatim(source: Source, dry_run: bool) -> None:
     """When we find non-markdown files in the source path, we just copy them over to the destination."""
-    log(f"From source file {source} creating destination {destination}.", 1)
+    log(f"From source file {source.path} creating destination {source.destination}.", 1)
     if not dry_run:
-        destination.write_bytes(source.read_bytes())
+        source.mkdir()
+        source.destination.write_bytes(source.path.read_bytes())
 
 
 def is_path_ignored(path: Path) -> bool:
@@ -220,11 +215,13 @@ def process(path: Path, dry_run: bool) -> None:
         return
     source = Source(path)
     if source.is_dir:
-        create_directory(path, source.destination, dry_run)
+        if not dry_run:
+            log(f"From source directory {source.path} creating destination {source.destination}.", 1)
+            source.mkdir()
     elif source.is_md:
-        create_page_from_markdown(path, source.destination, dry_run)
+        create_page_from_markdown(source, dry_run)
     else:
-        copy_verbatim(path, source.destination, dry_run)
+        copy_verbatim(source, dry_run)
 
 
 def render(dry_run: bool = False) -> None:
@@ -262,9 +259,7 @@ def paginate(dry_run: bool) -> None:
             )
 
         # now render a jinja template with the context
-        file_system_loader = FileSystemLoader("templates")
-        environment = Environment(loader=file_system_loader)
-        template = environment.get_template("page.html")
+        template = get_template("page.html")
 
         if not dry_run:
             page_path.parents[0].mkdir(parents=True, exist_ok=True)
@@ -280,23 +275,21 @@ def paginate(dry_run: bool) -> None:
 
 
 def generate_main_feed(dry_run: bool) -> None:
-    posts_for_feed = get_posts_for_feed()
+    posts_for_feed = get_posts_for_feed()  # list of Post objects
     context = []
 
     for post in posts_for_feed:
-        _post = Post(post)
+        # _post = Post(post)
         context.append(
             {
-                "title": _post.title,
-                "date_published": _post.date_published,
-                "url": _post.relative_url,
+                "title": post.title,
+                "date_published": post.date_published,
+                "url": post.relative_url,
             }
         )
 
     # now render a jinja template with the context
-    file_system_loader = FileSystemLoader("templates")
-    environment = Environment(loader=file_system_loader)
-    template = environment.get_template("feed.xml")
+    template = get_template("feed.xml")
 
     if not dry_run:
         config.FEED_PATH.parents[0].mkdir(parents=True, exist_ok=True)
@@ -324,9 +317,7 @@ def generate_feed_per_tag(dry_run: bool) -> None:
                 }
             )
         # now render a jinja template with the context
-        file_system_loader = FileSystemLoader("templates")
-        environment = Environment(loader=file_system_loader)
-        template = environment.get_template("feed.xml")
+        template = get_template("feed.xml")
 
         if not dry_run:
             log(f"Writing feed for tag {tag} at {feed_path}", 1)
@@ -342,9 +333,7 @@ def generate_feed_per_tag(dry_run: bool) -> None:
 
 def generate_feed_index(dry_run: bool) -> None:
     tags = sorted(get_posts_by_tag().keys())
-    file_system_loader = FileSystemLoader("templates")
-    environment = Environment(loader=file_system_loader)
-    template = environment.get_template("feeds.html")
+    template = get_template("feeds.html")
     path = config.DESTINATION_DIR / "feeds" / "index.html"
     if not dry_run:
         path.parents[0].mkdir(parents=True, exist_ok=True)

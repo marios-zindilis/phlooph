@@ -200,3 +200,38 @@ def test_source_type(mock_path_is_dir, path, mock_path_is_dir_return_value, expe
 def test_source_destination(path, expected_destination):
     source = Source(path)
     assert source.destination == expected_destination
+
+
+@pytest.mark.parametrize(
+    "path, expected_parent_directory",
+    [
+        ("/home/user/source-dir/some-other-dir/", Path("/home/user/destination-dir/")),
+        ("/home/user/source-dir/posts/post.md", Path("/home/user/destination-dir/posts/")),
+        ("/home/user/source-dir/images/image.png", Path("/home/user/destination-dir/images/")),
+    ],
+)
+@mock.patch("phlooph.models.config.DESTINATION_DIR", Path("/home/user/destination-dir"))
+@mock.patch("phlooph.models.config.SOURCE_DIR", Path("/home/user/source-dir"))
+def test_source_parent_directory(path, expected_parent_directory):
+    source = Source(path)
+    assert source.parent_directory == expected_parent_directory
+
+
+@mock.patch.object(Source, "parent_directory")
+@mock.patch.object(Source, "destination")
+@mock.patch.object(Source, "is_dir", True)
+def test_source_mkdir_when_source_is_dir(mock_source_destination, mock_source_parent_directory):
+    source = Source("some-fake-path")
+    source.mkdir()
+    mock_source_destination.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    mock_source_parent_directory.assert_not_called()
+
+
+@mock.patch.object(Source, "parent_directory")
+@mock.patch.object(Source, "destination")
+@mock.patch.object(Source, "is_dir", False)
+def test_source_mkdir_when_source_is_not_dir(mock_source_destination, mock_source_parent_directory):
+    source = Source("some-fake-path")
+    source.mkdir()
+    mock_source_destination.mkdir.assert_not_called()
+    mock_source_parent_directory.mkdir.assert_called_once_with(parents=True, exist_ok=True)
