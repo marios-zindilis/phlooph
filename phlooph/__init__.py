@@ -1,35 +1,18 @@
 import argparse
 import datetime
-import functools
 import inspect
 import logging
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 import fnmatch
 
-import markdown2
 from jinja2 import Environment, FileSystemLoader
-from ruamel.yaml import YAML
 
-HOME = Path.home()
-SOURCE_DIR = HOME / "Code" / "website-sources"
-DESTINATION_DIR = HOME / "Code" / "marios-zindilis.github.io"
-POSTS_DIR = SOURCE_DIR / "posts"
-FEED_PATH = DESTINATION_DIR / "feeds" / "feed.xml"
-EXCERPT_SEPARATOR = "<!-- read more -->"  # separates the excerpt from the rest of the content
-POSTS_PER_PAGE = 10  # used to paginate posts into pages
-POSTS_IN_FEED = 20  # used to generate the RSS feed
-IGNORE = [  # list of files to be ignored during rendering, relative to SOURCE_DIR, passed to fnmatch.fnmatch()
-    "README.md",
-    "test",
-    "LICENSE",
-    ".git",
-    ".git/*",
-    "drafts",
-    "drafts/*",
-]
+from phlooph.models import Source, Post
+from phlooph import config
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,133 +68,18 @@ def log(message: str, verbosity: int = 0) -> None:
     logger.debug(f"{calling_function}{message}")
 
 
-@functools.lru_cache(maxsize=512)  # don"t read from disk twice for the same source
-def get_source_lines(source) -> List[str]:
-    """
-    Given the path of a source file, return its contents as a list of lines.
-    """
-    text = source.read_text()
-    return text.splitlines()
-
-
-def get_front_matter_text(source: Path) -> str:
-    """
-    Given the path of a source file, return the part of the text that is the front matter.
-    """
-    lines = get_source_lines(source)
-    line_is_front_matter = False
-    front_matter = []
-    for line in lines:
-        line = line.strip()
-        if line == "---" and not line_is_front_matter:
-            line_is_front_matter = True
-            continue
-        if line != "---" and line_is_front_matter:
-            front_matter.append(line)
-        if line == "---" and line_is_front_matter:
-            break
-    return "\n".join(front_matter)
-
-
-def get_front_matter(source) -> dict:
-    """
-    Given the path of a source file, return its front matter as a dictionary.
-    """
-    front_matter_lines = get_front_matter_text(source)
-    yaml = YAML()
-    return yaml.load(front_matter_lines)
-
-
-def get_source_text_excluding_front_matter(source: Path) -> str:
-    """
-    Return the part of the source file excluding the front matter, to be used for rendering.
-    """
-    lines = get_source_lines(source)
-    lines_excluding_front_matter = []
-    line_is_front_matter = False
-    for line in lines:
-        stripped_line = line.strip()
-        if stripped_line == "---" and not line_is_front_matter:
-            line_is_front_matter = True
-            continue
-        if stripped_line != "---" and line_is_front_matter:
-            continue
-        if stripped_line == "---" and line_is_front_matter:
-            line_is_front_matter = False
-            continue
-        lines_excluding_front_matter.append(line)
-    return "\n".join(lines_excluding_front_matter)
-
-
-def get_post_excerpt(source: Path) -> str:
-    """
-    Given the path of a source file, get its exceprt, i.e. the text before the EXCERPT_SEPARATOR string.
-    """
-    source_text_excluding_front_matter = get_source_text_excluding_front_matter(source)
-
-    if EXCERPT_SEPARATOR in source_text_excluding_front_matter:
-        # return the text from the beginning until the position of the EXCERPT_SEPARATOR:
-        separator_position = source_text_excluding_front_matter.find(EXCERPT_SEPARATOR)
-        return source_text_excluding_front_matter[:separator_position]
-
-
-def get_title(source: Path) -> str:
-    """Given the path of a source file, get its title from the front matter."""
-    front_matter = get_front_matter(source)
-    return front_matter.get("title", None)
-
-
-def get_rendered_markdown(source: Path) -> str:
+def get_rendered_markdown(path: Path) -> str:
     """Given the path of a source file, return it rendered as HTML."""
     file_system_loader = FileSystemLoader("templates")
     environment = Environment(loader=file_system_loader)
     template = environment.get_template("post.html")
-    text = get_source_text_excluding_front_matter(source)
-    title = get_title(source)
+    post = Post(path)
     return template.render(
-        content=markdown2.markdown(text, extras=["fenced-code-blocks"]),
-        title=title,
-        date_published=get_date_published(source),
+        content=post.html,
+        title=post.title,
+        date_published=post.date_published,
         tags=sorted(get_posts_by_tag().keys()),
     )
-
-
-def get_date_published(source) -> datetime.datetime:
-    """Get the date on which a page was first published."""
-    front_matter = get_front_matter(source)
-    return front_matter.get("first-published", None)
-
-
-def get_tags(source):
-    """Given the path of a source files, returns its tags from the front matter."""
-    front_matter = get_front_matter(source)
-    tags = []
-    for tag in front_matter.get("tags", []):
-        tags.append(tag.lower().replace(" ", "-"))  # e.g "Django Rest Framework" -> "django-rest-framework"
-    return tags
-
-
-def get_url(source: Path) -> str:
-    """Given the path of a source file, return its relative URL."""
-    source_path_relative_to_source_dir = get_source_path_relative_to_source_dir(source)
-    url_parts = str(source_path_relative_to_source_dir).split("/")[:-1]
-    url = "/".join(url_parts)
-    return f"/{url}/"
-
-
-def get_source_path_relative_to_source_dir(source: Path) -> Path:
-    """Return the part of the source that is relative to the SOURCE_DIR. For example, assuming that SOURCE_DIR is
-    `~/Code/website-sources/`, then for this source file:
-
-        ~/Code/website-sources/docs/more-docs/even-more-docs/file.txt
-
-    ...the part that is relative to SOURCE_DIR is:
-
-        docs/more-docs/even-more-docs/file.txt
-    """
-    source_parts_after_source_dir = source.parts[len(SOURCE_DIR.parts) :]  # noqa: E203
-    source_path_after_source_dir = "/".join(source_parts_after_source_dir)
-    return Path(source_path_after_source_dir)
 
 
 def get_posts_by_publication_date() -> dict:
@@ -220,8 +88,9 @@ def get_posts_by_publication_date() -> dict:
     values are lists of posts published on that date.
     """
     posts_by_publication_date = defaultdict(list)
-    for post in POSTS_DIR.glob("**/*.md"):
-        date_first_published = get_date_published(post)
+    for post in config.POSTS_DIR.glob("**/*.md"):
+        _post = Post(post)
+        date_first_published = _post.date_published
         posts_by_publication_date[date_first_published].append(post)
     return posts_by_publication_date
 
@@ -236,7 +105,7 @@ def get_posts_by_page_number():
     for publication_date in publication_dates:
         for post in posts_by_publication_date[publication_date]:
 
-            if len(pages[page_index]) == POSTS_PER_PAGE:
+            if len(pages[page_index]) == config.POSTS_PER_PAGE:
                 page_index += 1  # next page
 
             pages[page_index].append(post)
@@ -251,19 +120,10 @@ def get_posts_for_feed():
     posts_for_feed = []
 
     for publication_date in publication_dates:
-        if len(posts_for_feed) >= POSTS_IN_FEED:
+        if len(posts_for_feed) >= config.POSTS_IN_FEED:
             return posts_for_feed
         for post in posts_by_publication_date[publication_date]:
             posts_for_feed.append(post)
-
-
-def get_destination(source: Path) -> Path:
-    """Given the path of a source file, return the destination path."""
-    source_path_relative_to_source_dir = get_source_path_relative_to_source_dir(source)
-    destination_path = DESTINATION_DIR / source_path_relative_to_source_dir
-    if source.match("*.md"):
-        return destination_path.with_name("index.html")
-    return destination_path
 
 
 def get_post_image(source: Path) -> Optional[str]:
@@ -275,11 +135,12 @@ def get_post_image(source: Path) -> Optional[str]:
             return str(image_path)
 
 
-def get_posts_by_tag() -> dict:
+def get_posts_by_tag() -> Dict[str, List[Path]]:
     """Return a dictionary where the keys are tags and the values are lists of posts with that tag."""
     posts_by_tag = defaultdict(list)
-    for post in POSTS_DIR.glob("**/*.md"):
-        tags = get_tags(post)
+    for post in config.POSTS_DIR.glob("**/*.md"):
+        _post = Post(post)
+        tags = _post.tags
         for tag in tags:
             posts_by_tag[tag].append(post)
     return posts_by_tag
@@ -290,9 +151,10 @@ def create_page_per_tag(posts_by_tag: dict, dry_run: bool) -> None:
     for tag, tagged_posts in posts_by_tag.items():
         posts = []
         for tagged_post in tagged_posts:
-            posts.append({"title": get_title(tagged_post), "url": get_url(tagged_post)})
+            post = Post(tagged_post)
+            posts.append({"title": post.title, "url": post.relative_url})
 
-        tag_path = DESTINATION_DIR / "tags" / tag / "index.html"
+        tag_path = config.DESTINATION_DIR / "tags" / tag / "index.html"
         # now render a jinja template with the context
         file_system_loader = FileSystemLoader("templates")
         environment = Environment(loader=file_system_loader)
@@ -304,7 +166,7 @@ def create_page_per_tag(posts_by_tag: dict, dry_run: bool) -> None:
 
 def create_tag_index(posts_by_tag: dict, dry_run: bool) -> None:
     """Given a dictionary of {tag: [posts]}, create a page with an index of all tags."""
-    tags_path = DESTINATION_DIR / "tags" / "index.html"
+    tags_path = config.DESTINATION_DIR / "tags" / "index.html"
     file_system_loader = FileSystemLoader("templates")
     environment = Environment(loader=file_system_loader)
     template = environment.get_template("tags.html")
@@ -326,10 +188,10 @@ def create_directory(source: Path, destination: Path, dry_run: bool) -> None:
         destination.mkdir(parents=True, exist_ok=True)
 
 
-def create_page_from_markdown(source: Path, destination: Path, dry_run: bool) -> None:
-    """What we find markdown files in the source path, we render them into HTML."""
-    log(f"From markdown source {source} creating destination {destination}.", 1)
-    rendered_markdown = get_rendered_markdown(source)
+def create_page_from_markdown(path: Path, destination: Path, dry_run: bool) -> None:
+    """When we find markdown files in the source path, we render them into HTML."""
+    log(f"From markdown source {path} creating destination {destination}.", 1)
+    rendered_markdown = get_rendered_markdown(path)
     if not dry_run:
         destination.parents[0].mkdir(parents=True, exist_ok=True)
         destination.write_text(rendered_markdown)
@@ -342,33 +204,33 @@ def copy_verbatim(source: Path, destination: Path, dry_run: bool) -> None:
         destination.write_bytes(source.read_bytes())
 
 
-def is_source_ignored(source: Path) -> bool:
+def is_path_ignored(path: Path) -> bool:
     """Check if a source path should be ignored from processing."""
-    source_path_relative_to_source_dir = get_source_path_relative_to_source_dir(source)
-    for ignore_match in IGNORE:
-        if fnmatch.fnmatch(str(source_path_relative_to_source_dir), ignore_match):
+    source = Source(path)
+    for ignore_match in config.IGNORE:
+        if fnmatch.fnmatch(str(source.path_relative_to_source_dir), ignore_match):
             return True
     return False
 
 
-def process(source: Path, dry_run: bool) -> None:
+def process(path: Path, dry_run: bool) -> None:
     """Route each source file to its corresponding handler."""
-    if is_source_ignored(source):
-        log(f"Ignoring source {source}")
+    if is_path_ignored(path=path):
+        log(f"Ignoring source path {path}")
         return
-    destination = get_destination(source)
-    if source.is_dir():
-        create_directory(source, destination, dry_run)
-    elif source.match("*.md"):
-        create_page_from_markdown(source, destination, dry_run)
+    source = Source(path)
+    if source.is_dir:
+        create_directory(path, source.destination, dry_run)
+    elif source.is_md:
+        create_page_from_markdown(path, source.destination, dry_run)
     else:
-        copy_verbatim(source, destination, dry_run)
+        copy_verbatim(path, source.destination, dry_run)
 
 
 def render(dry_run: bool = False) -> None:
     """Get a list of source files, and call process() for each one."""
-    for source in SOURCE_DIR.glob("**/*"):
-        process(source=source, dry_run=dry_run)
+    for path in config.SOURCE_DIR.glob("**/*"):
+        process(path=path, dry_run=dry_run)
 
 
 def paginate(dry_run: bool) -> None:
@@ -378,25 +240,24 @@ def paginate(dry_run: bool) -> None:
 
     for page, posts in posts_by_page_number.items():
         if page == 0:
-            page_path = DESTINATION_DIR / "index.html"
+            page_path = config.DESTINATION_DIR / "index.html"
             title = "Marios Zindilis"
         else:
-            page_path = DESTINATION_DIR / "pages" / str(page) / "index.html"
+            page_path = config.DESTINATION_DIR / "pages" / str(page) / "index.html"
             title = f"Marios Zindilis - Page {page}"
 
         context = []
         for post in posts:
-            text = get_source_text_excluding_front_matter(post)
-            excerpt = get_post_excerpt(post)
+            _post = Post(post)
             context.append(
                 {
-                    "title": get_title(post),
-                    "date_published": get_date_published(post),
-                    "content": markdown2.markdown(text, extras=["fenced-code-blocks"]),
-                    "url": get_url(post),
-                    "excerpt": markdown2.markdown(excerpt) if excerpt else None,
+                    "title": _post.title,
+                    "date_published": _post.date_published,
+                    "content": _post.html,
+                    "url": _post.relative_url,
+                    "excerpt": _post.excerpt,
                     "image": get_post_image(post),
-                    "tags": get_tags(post),
+                    "tags": _post.tags,
                 }
             )
 
@@ -423,11 +284,12 @@ def generate_feed(dry_run: bool) -> None:
     context = []
 
     for post in posts_for_feed:
+        _post = Post(post)
         context.append(
             {
-                "title": get_title(post),
-                "date_published": get_date_published(post),
-                "url": get_url(post),
+                "title": _post.title,
+                "date_published": _post.date_published,
+                "url": _post.relative_url,
             }
         )
 
@@ -437,8 +299,8 @@ def generate_feed(dry_run: bool) -> None:
     template = environment.get_template("feed.xml")
 
     if not dry_run:
-        FEED_PATH.parents[0].mkdir(parents=True, exist_ok=True)
-        FEED_PATH.write_text(
+        config.FEED_PATH.parents[0].mkdir(parents=True, exist_ok=True)
+        config.FEED_PATH.write_text(
             template.render(
                 last_build_date=datetime.datetime.now(),
                 posts=context,
