@@ -1,9 +1,9 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
-        <title>Marios Zindilis</title>
-        <link>https://zindilis.com/</link>
-        <description>Personal website of Marios Zindilis</description>
-        <atom:link href="https://zindilis.com/feeds/feed.xml" rel="self" type="application/rss+xml" />
+        <title>Marios Zindilis{% if name != "feed" %} - Posts tagged {{ name }}{% endif %}</title>
+        <link>https://zindilis.com/{% if name != "feed" %}tags/{{ name }}/{% endif %}</link>
+        <description>Personal website of Marios Zindilis{% if name != "feed" %} - Posts tagged {{ name }}{% endif %}</description>
+        <atom:link href="https://zindilis.com/feeds/{{ name }}.xml" rel="self" type="application/rss+xml" />
         <lastBuildDate>{{ last_build_date.strftime('%a, %d %b %Y %H:%M:%S UT') }}</lastBuildDate>
         {% for post in posts %}<item>
             <title>{{ post.title }}</title>

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col">
+            <h1>Feeds</h1>
+            <h3>Main</h3>
+            <p>
+                Main feed for all posts: <a href="/feeds/feed.xml">/feeds/feed.xml</a>
+            </p>
+            <h3>Feeds per tag</h3>
+            <p>
+                Separate feed per tag:
+                <ul>
+                {% for tag in tags %}
+                    <li><a href="/feeds/{{ tag }}.xml">/feeds/{{ tag }}.xml</a></li>
+                {% endfor %}
+                </ul>
+            </p>
+        </div>
+    </div><!-- .row -->
+</div><!-- .container -->
+{% endblock %}

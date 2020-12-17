@@ -279,7 +279,7 @@ def paginate(dry_run: bool) -> None:
             )
 
 
-def generate_feed(dry_run: bool) -> None:
+def generate_main_feed(dry_run: bool) -> None:
     posts_for_feed = get_posts_for_feed()
     context = []
 
@@ -302,10 +302,59 @@ def generate_feed(dry_run: bool) -> None:
         config.FEED_PATH.parents[0].mkdir(parents=True, exist_ok=True)
         config.FEED_PATH.write_text(
             template.render(
+                name="feed",
                 last_build_date=datetime.datetime.now(),
                 posts=context,
             )
         )
+
+
+def generate_feed_per_tag(dry_run: bool) -> None:
+    posts_by_tag = get_posts_by_tag()
+    for tag, posts in posts_by_tag.items():
+        feed_path = config.DESTINATION_DIR / "feeds" / f"{tag}.xml"
+        context = []
+        for post in posts:
+            _post = Post(post)
+            context.append(
+                {
+                    "title": _post.title,
+                    "date_published": _post.date_published,
+                    "url": _post.relative_url,
+                }
+            )
+        # now render a jinja template with the context
+        file_system_loader = FileSystemLoader("templates")
+        environment = Environment(loader=file_system_loader)
+        template = environment.get_template("feed.xml")
+
+        if not dry_run:
+            log(f"Writing feed for tag {tag} at {feed_path}", 1)
+            feed_path.parents[0].mkdir(parents=True, exist_ok=True)
+            feed_path.write_text(
+                template.render(
+                    name=tag,
+                    last_build_date=datetime.datetime.now(),
+                    posts=context,
+                )
+            )
+
+
+def generate_feed_index(dry_run: bool) -> None:
+    tags = sorted(get_posts_by_tag().keys())
+    file_system_loader = FileSystemLoader("templates")
+    environment = Environment(loader=file_system_loader)
+    template = environment.get_template("feeds.html")
+    path = config.DESTINATION_DIR / "feeds" / "index.html"
+    if not dry_run:
+        path.parents[0].mkdir(parents=True, exist_ok=True)
+        path.write_text(template.render(tags=tags))
+
+
+def generate_feed(dry_run: bool) -> None:
+    generate_main_feed(dry_run)
+    generate_feed_per_tag(dry_run)
+    generate_feed_index(dry_run)
 
 
 def main():
