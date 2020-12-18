@@ -1,6 +1,6 @@
 import functools
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 from ruamel.yaml import YAML
 import datetime
 import markdown2
@@ -159,6 +159,26 @@ class Post(Source):
         return f"/{url}/"
 
     @property
-    def html(self) -> str:
+    def content(self) -> str:
         """Return the post's Markdown text, rendered as HTML."""
         return markdown2.markdown(self.text, extras=["fenced-code-blocks"])
+
+    @property
+    def image(self) -> Optional[str]:
+        for image_file in config.POST_IMAGE_FILES:
+            image_path = self.parent_directory / image_file
+            if image_path.is_file():
+                return str(image_path)
+
+    @property
+    def context(self) -> dict:
+        """Return the context dictionary that will be used to render Jinja templates."""
+        return {
+            "title": self.title,
+            "date_published": self.date_published,
+            "content": self.content,
+            "relative_url": self.relative_url,
+            "excerpt": self.excerpt,
+            "image": self.image,
+            "tags": self.tags,
+        }

@@ -5,7 +5,7 @@ import logging
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Dict
 import fnmatch
 
 from jinja2 import Environment, FileSystemLoader, Template
@@ -78,12 +78,7 @@ def get_rendered_markdown(path: Path) -> str:
     """Given the path of a source file, return it rendered as HTML."""
     template = get_template("post.html")
     post = Post(path)
-    return template.render(
-        content=post.html,
-        title=post.title,
-        date_published=post.date_published,
-        tags=sorted(get_posts_by_tag().keys()),
-    )
+    return template.render(post=post)
 
 
 def get_posts_by_publication_date() -> dict:
@@ -99,7 +94,7 @@ def get_posts_by_publication_date() -> dict:
     return posts_by_publication_date
 
 
-def get_posts_by_page_number():
+def get_posts_by_page_number() -> Dict[datetime.date, List[Post]]:
     """Sort all posts by publication date and then bundle them in groups of POSTS_PER_PAGE."""
     posts_by_publication_date = get_posts_by_publication_date()
     publication_dates = sorted(posts_by_publication_date, reverse=True)
@@ -130,15 +125,6 @@ def get_posts_for_feed() -> List[Post]:
             posts_for_feed.append(Post(post))
 
 
-def get_post_image(source: Path) -> Optional[str]:
-    """Given the path of a source file, return its associated image, if one exists."""
-    source_directory = source.parents[0]
-    for image_file in ("index.jpg", "index.jpeg", "index.png"):
-        image_path = source_directory / image_file
-        if image_path.is_file():
-            return str(image_path)
-
-
 def get_posts_by_tag() -> Dict[str, List[Path]]:
     """Return a dictionary where the keys are tags and the values are lists of posts with that tag."""
     posts_by_tag = defaultdict(list)
@@ -152,15 +138,15 @@ def get_posts_by_tag() -> Dict[str, List[Path]]:
 
 def create_page_per_tag(posts_by_tag: dict, dry_run: bool) -> None:
     """Given a dictionary of {tag: [posts]}, create one page for each tag with its posts."""
+    template = get_template("tag.html")
     for tag, tagged_posts in posts_by_tag.items():
         posts = []
         for tagged_post in tagged_posts:
             post = Post(tagged_post)
-            posts.append({"title": post.title, "url": post.relative_url})
+            posts.append(post)
 
         tag_path = config.DESTINATION_DIR / "tags" / tag / "index.html"
         # now render a jinja template with the context
-        template = get_template("tag.html")
         if not dry_run:
             tag_path.parents[0].mkdir(parents=True, exist_ok=True)
             tag_path.write_text(template.render(posts=posts, tag=tag))
@@ -186,7 +172,6 @@ def create_page_from_markdown(source: Source, dry_run: bool) -> None:
     log(f"From markdown source {source.path} creating destination {source.destination}.", 1)
     rendered_markdown = get_rendered_markdown(source.path)
     if not dry_run:
-        # source.destination.parents[0].mkdir(parents=True, exist_ok=True)
         source.mkdir()
         source.destination.write_text(rendered_markdown)
 
@@ -234,6 +219,7 @@ def paginate(dry_run: bool) -> None:
     posts_by_page_number = get_posts_by_page_number()
     posts_by_tag = get_posts_by_tag()
     tags = sorted(posts_by_tag.keys())
+    template = get_template("page.html")
 
     for page, posts in posts_by_page_number.items():
         if page == 0:
@@ -246,21 +232,9 @@ def paginate(dry_run: bool) -> None:
         context = []
         for post in posts:
             _post = Post(post)
-            context.append(
-                {
-                    "title": _post.title,
-                    "date_published": _post.date_published,
-                    "content": _post.html,
-                    "url": _post.relative_url,
-                    "excerpt": _post.excerpt,
-                    "image": get_post_image(post),
-                    "tags": _post.tags,
-                }
-            )
+            context.append(_post.context)
 
         # now render a jinja template with the context
-        template = get_template("page.html")
-
         if not dry_run:
             page_path.parents[0].mkdir(parents=True, exist_ok=True)
             page_path.write_text(
@@ -275,20 +249,6 @@ def paginate(dry_run: bool) -> None:
 
 
 def generate_main_feed(dry_run: bool) -> None:
-    posts_for_feed = get_posts_for_feed()  # list of Post objects
-    context = []
-
-    for post in posts_for_feed:
-        # _post = Post(post)
-        context.append(
-            {
-                "title": post.title,
-                "date_published": post.date_published,
-                "url": post.relative_url,
-            }
-        )
-
-    # now render a jinja template with the context
     template = get_template("feed.xml")
 
     if not dry_run:
@@ -297,28 +257,21 @@ def generate_main_feed(dry_run: bool) -> None:
             template.render(
                 name="feed",
                 last_build_date=datetime.datetime.now(),
-                posts=context,
+                posts=get_posts_for_feed(),  # list of Post objects
             )
         )
 
 
 def generate_feed_per_tag(dry_run: bool) -> None:
     posts_by_tag = get_posts_by_tag()
+    template = get_template("feed.xml")
     for tag, posts in posts_by_tag.items():
         feed_path = config.DESTINATION_DIR / "feeds" / f"{tag}.xml"
         context = []
         for post in posts:
             _post = Post(post)
-            context.append(
-                {
-                    "title": _post.title,
-                    "date_published": _post.date_published,
-                    "url": _post.relative_url,
-                }
-            )
+            context.append(_post)
         # now render a jinja template with the context
-        template = get_template("feed.xml")
-
         if not dry_run:
             log(f"Writing feed for tag {tag} at {feed_path}", 1)
             feed_path.parents[0].mkdir(parents=True, exist_ok=True)
@@ -340,7 +293,7 @@ def generate_feed_index(dry_run: bool) -> None:
         path.write_text(template.render(tags=tags))
 
 
-def generate_feed(dry_run: bool) -> None:
+def generate_feeds(dry_run: bool) -> None:
     generate_main_feed(dry_run)
     generate_feed_per_tag(dry_run)
     generate_feed_index(dry_run)
@@ -369,4 +322,4 @@ def main():
     if args.skip_feed:
         log("Skipping Feed", 1)
     else:
-        generate_feed(args.dry_run)
+        generate_feeds(args.dry_run)

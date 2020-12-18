@@ -4,11 +4,11 @@
     <div class="row">
         <article class="col">
             <header>
-                <h1 class="mt-4">{{ title }}</h1>
+                <h1 class="mt-4">{{ post.title }}</h1>
             </header>
-            {{ content }}
+            {{ post.content }}
             <footer>
-                {% if date_published %}<p>Posted on {{ date_published }}</p>{% endif %}
+                {% if post.date_published %}<p>Posted on {{ post.date_published }}</p>{% endif %}
             </footer>
         </article>
     </div> <!-- .row -->

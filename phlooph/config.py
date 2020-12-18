@@ -22,3 +22,5 @@ POSTS_IN_FEED = 20  # used to generate the RSS feed
 POSTS_PER_PAGE = 10  # used to paginate posts into pages
 
 EXCERPT_SEPARATOR = "<!-- read more -->"  # separates the excerpt from the rest of the content
+
+POST_IMAGE_FILES = ("index.jpg", "index.jpeg", "index.png")

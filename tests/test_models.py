@@ -62,7 +62,7 @@ FAKE_POST_TEXT_WITHOUT_EXCERPT = (
     "post content."
 )
 
-FAKE_POST_HTML = "<p>This is the post excerpt.</p>\n\n<!-- read more -->\n\n<p>This is the post content.</p>\n"
+FAKE_POST_CONTENT = "<p>This is the post excerpt.</p>\n\n<!-- read more -->\n\n<p>This is the post content.</p>\n"
 
 
 @pytest.mark.parametrize(
@@ -166,9 +166,9 @@ def test_post_relative_url():
 
 
 @mock.patch("phlooph.models.Path.read_text", return_value=FAKE_POST_TEXT)
-def test_post_html(mock_read_text):
+def test_post_content(mock_read_text):
     post = Post("some-fake-post.md")
-    assert post.html == FAKE_POST_HTML
+    assert post.content == FAKE_POST_CONTENT
 
 
 @pytest.mark.parametrize(
@@ -235,3 +235,32 @@ def test_source_mkdir_when_source_is_not_dir(mock_source_destination, mock_sourc
     source.mkdir()
     mock_source_destination.mkdir.assert_not_called()
     mock_source_parent_directory.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+
+@mock.patch.object(Source, "parent_directory", Path("/fake/path"))
+@mock.patch("phlooph.models.Path.is_file", return_value=True)
+def test_post_image_when_image_exists(mock_path_is_file):
+    post = Post("/fake/path/some-fake-post.md")
+    assert post.image == "/fake/path/index.jpg"
+
+
+@mock.patch.object(Source, "parent_directory", Path("/fake/path"))
+@mock.patch("phlooph.models.Path.is_file", return_value=False)
+def test_post_image_when_image_does_not_exist(mock_path_is_file):
+    post = Post("/fake/path/some-fake-post.md")
+    assert post.image is None
+
+
+@mock.patch("phlooph.models.config.SOURCE_DIR", Path("/home/user/source-dir"))
+@mock.patch("phlooph.models.Path.read_text", return_value=FAKE_POST_TEXT)
+def test_post_context(mock_read_text):
+    post = Post("/home/user/source-dir/posts/some-post/index.md")
+    assert post.context == {
+        "title": "Fake Post Title",
+        "date_published": datetime.date(2020, 12, 17),
+        "content": FAKE_POST_CONTENT,
+        "relative_url": "/posts/some-post/",
+        "excerpt": FAKE_POST_EXCERPT,
+        "image": None,
+        "tags": ["fake-tag-1", "fake-tag-2"],
+    }

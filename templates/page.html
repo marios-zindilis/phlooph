@@ -6,10 +6,10 @@
     {% for post in posts %}
       <div class="card my-4">
       {% if post.image %}
-        <img class="card-img-top" src="{{ post.url }}index.jpg" alt="Card image cap">
+        <img class="card-img-top" src="{{ post.relative_url }}index.jpg" alt="Card image cap">
       {% endif %}
         <div class="card-body">
-          <a href="{{ post.url }}">
+          <a href="{{ post.relative_url }}">
             <h2 class="card-title">{{ post.title }}</h2>
           </a>
 
@@ -17,7 +17,7 @@
           <div class="card-text">
             {{ post.excerpt }}
           </div>
-          <a href="{{ post.url }}" class="btn btn-primary">Read More &rarr;</a>
+          <a href="{{ post.relative_url }}" class="btn btn-primary">Read More &rarr;</a>
           {% else %}
           <div class="card-text">
             {{ post.content }}

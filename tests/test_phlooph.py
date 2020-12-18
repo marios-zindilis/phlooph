@@ -15,7 +15,7 @@ def get_args_side_effect_all_defaults(*args, **kwargs):
     )
 
 
-@mock.patch("phlooph.generate_feed")
+@mock.patch("phlooph.generate_feeds")
 @mock.patch("phlooph.tag")
 @mock.patch("phlooph.paginate")
 @mock.patch("phlooph.render")
@@ -27,7 +27,7 @@ def test_main(
     mock_render,
     mock_paginate,
     mock_tag,
-    mock_generate_feed,
+    mock_generate_feeds,
 ):
     phlooph.main()
     mock_get_args.assert_called_once()
@@ -35,4 +35,4 @@ def test_main(
     mock_render.assert_called_once_with(False)
     mock_paginate.assert_called_once_with(False)
     mock_tag.assert_called_once_with(False)
-    mock_generate_feed.assert_called_once_with(False)
+    mock_generate_feeds.assert_called_once_with(False)
