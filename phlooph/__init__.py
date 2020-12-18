@@ -32,6 +32,7 @@ def get_args():
     argument_parser.add_argument("--skip-pagination", "-p", action="store_true", default=False)
     argument_parser.add_argument("--skip-tagging", "-t", action="store_true", default=False)
     argument_parser.add_argument("--skip-feed", "-f", action="store_true", default=False)
+    argument_parser.add_argument("--skip-sitemap", "-s", action="store_true", default=False)
     return argument_parser.parse_args()
 
 
@@ -299,6 +300,17 @@ def generate_feeds(dry_run: bool) -> None:
     generate_feed_index(dry_run)
 
 
+def generate_sitemap(dry_run: bool) -> None:
+    posts = []
+    for path in config.POSTS_DIR.glob("**/*.md"):
+        posts.append(Post(path))
+    template = get_template("sitemap.xml")
+    sitemap_path = config.DESTINATION_DIR / "sitemap.xml"
+
+    if not dry_run:
+        sitemap_path.write_text(template.render(posts=posts))
+
+
 def main():
     args = get_args()
 
@@ -323,3 +335,8 @@ def main():
         log("Skipping Feed", 1)
     else:
         generate_feeds(args.dry_run)
+
+    if args.skip_sitemap:
+        log("Skipping Sitemap", 1)
+    else:
+        generate_sitemap(args.dry_run)
