@@ -14,6 +14,7 @@ first-published: 2020-12-17
 tags:
 - Fake Tag 1
 - Fake Tag 2
+description: This is the description of a fake post
 ---
 
 This is the post excerpt.
@@ -24,8 +25,9 @@ This is the post content.
 """
 
 FAKE_POST_TEXT = (
-    "---\ntitle: Fake Post Title\nfirst-published: 2020-12-17\ntags:\n- Fake Tag 1\n- Fake Tag 2\n---\n\nThis is the "
-    "post excerpt.\n\n<!-- read more -->\n\nThis is the post content."
+    "---\ntitle: Fake Post Title\nfirst-published: 2020-12-17\ntags:\n- Fake Tag 1\n- Fake Tag 2\ndescription: This "
+    "is the description of a fake post\n---\n\nThis is the post excerpt.\n\n<!-- read more -->\n\nThis is the post "
+    "content."
 )
 
 FAKE_POST_LINES = [
@@ -35,6 +37,7 @@ FAKE_POST_LINES = [
     "tags:",
     "- Fake Tag 1",
     "- Fake Tag 2",
+    "description: This is the description of a fake post",
     "---",
     "",
     "This is the post excerpt.",
@@ -44,12 +47,16 @@ FAKE_POST_LINES = [
     "This is the post content.",
 ]
 
-FAKE_POST_FRONT_MATTER_TEXT = "title: Fake Post Title\nfirst-published: 2020-12-17\ntags:\n- Fake Tag 1\n- Fake Tag 2"
+FAKE_POST_FRONT_MATTER_TEXT = (
+    "title: Fake Post Title\nfirst-published: 2020-12-17\ntags:\n- Fake Tag 1\n- Fake Tag 2\ndescription: This is the "
+    "description of a fake post"
+)
 
 FAKE_POST_FRONT_MATTER = {
     "title": "Fake Post Title",
     "first-published": datetime.date(2020, 12, 17),
     "tags": ["Fake Tag 1", "Fake Tag 2"],
+    "description": "This is the description of a fake post",
 }
 
 FAKE_POST_TEXT_EXCLUDING_FRONT_MATTER = "\nThis is the post excerpt.\n\n<!-- read more -->\n\nThis is the post content."
@@ -63,6 +70,8 @@ FAKE_POST_TEXT_WITHOUT_EXCERPT = (
 )
 
 FAKE_POST_CONTENT = "<p>This is the post excerpt.</p>\n\n<!-- read more -->\n\n<p>This is the post content.</p>\n"
+
+FAKE_POST_DESCRIPTION = "This is the description of a fake post"
 
 
 @pytest.mark.parametrize(
@@ -121,6 +130,12 @@ def test_post_front_matter(mock_read_text):
 def test_post_title(mock_read_text):
     post = Post("some-fake-post.md")
     assert post.title == "Fake Post Title"
+
+
+@mock.patch("phlooph.models.Path.read_text", return_value=FAKE_POST_TEXT)
+def test_post_description(mock_read_text):
+    post = Post("some-fake-post.md")
+    assert post.description == FAKE_POST_DESCRIPTION
 
 
 @mock.patch("phlooph.models.Path.read_text", return_value=FAKE_POST_TEXT)
@@ -257,6 +272,7 @@ def test_post_context(mock_read_text):
     post = Post("/home/user/source-dir/posts/some-post/index.md")
     assert post.context == {
         "title": "Fake Post Title",
+        "description": FAKE_POST_DESCRIPTION,
         "date_published": datetime.date(2020, 12, 17),
         "content": FAKE_POST_CONTENT,
         "relative_url": "/posts/some-post/",

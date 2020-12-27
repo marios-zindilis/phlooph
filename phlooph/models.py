@@ -102,6 +102,10 @@ class Post(Source):
         return self.front_matter["title"]
 
     @property
+    def description(self) -> str:
+        return self.front_matter["description"]
+
+    @property
     def tags(self) -> List[str]:
         _tags = []
         for tag in self.front_matter.get("tags", []):
@@ -175,6 +179,7 @@ class Post(Source):
         """Return the context dictionary that will be used to render Jinja templates."""
         return {
             "title": self.title,
+            "description": self.description,
             "date_published": self.date_published,
             "content": self.content,
             "relative_url": self.relative_url,
