@@ -104,7 +104,6 @@ def get_posts_by_page_number() -> Dict[datetime.date, List[Post]]:
 
     for publication_date in publication_dates:
         for post in posts_by_publication_date[publication_date]:
-
             if len(pages[page_index]) == config.POSTS_PER_PAGE:
                 page_index += 1  # next page
 
