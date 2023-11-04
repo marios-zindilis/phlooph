@@ -154,7 +154,16 @@ class Post(Source):
         # return the text from the beginning until the position of the EXCERPT_SEPARATOR:
         separator_position = self.text.find(config.EXCERPT_SEPARATOR)
         _excerpt = self.text[:separator_position]
-        return markdown2.markdown(_excerpt, extras=["fenced-code-blocks"])
+        return markdown2.markdown(
+            _excerpt,
+            extras={
+                "fenced-code-blocks": None,
+                "tables": None,
+                "html-classes": {
+                    "table": "table",
+                },
+            },
+        )
 
     @property
     def relative_url(self) -> str:
@@ -165,7 +174,16 @@ class Post(Source):
     @property
     def content(self) -> str:
         """Return the post's Markdown text, rendered as HTML."""
-        return markdown2.markdown(self.text, extras=["fenced-code-blocks"])
+        return markdown2.markdown(
+            self.text,
+            extras={
+                "fenced-code-blocks": None,
+                "tables": None,
+                "html-classes": {
+                    "table": "table",
+                },
+            },
+        )
 
     @property
     def image(self) -> Optional[str]:
