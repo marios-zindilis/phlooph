@@ -10,7 +10,11 @@
                 {{ post.content }}
             </div>
             <footer>
-                {% if post.date_published %}<p>Posted on <span itemprop="datePublished" content="{{ post.date_published }}">{{ post.date_published }}</span></p>{% endif %}
+                {% if post.date_published %}
+                    <p>Posted on <span itemprop="datePublished" content="{{ post.date_published }}">
+                        {{ post.date_published }}</span>
+                    </p>
+                {% endif %}
             </footer>
         </article>
     </div> <!-- .row -->

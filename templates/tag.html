@@ -1,9 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Posts tagged "{{ tag }}"</h1>
-<ul>
-{% for post in posts %}
-    <li><a href="{{ post.relative_url }}">{{ post.title }}</a></li>
-{% endfor %}
-</ul>
+<div class="container">
+    <div class="row">
+        <article class="col">
+            <header>
+                <h1>Posts tagged "{{ tag }}"</h1>
+            </header>
+            <ul>
+                {% for post in posts %}
+                    <li><a href="{{ post.relative_url }}">{{ post.title }}</a></li>
+                {% endfor %}
+            </ul>
+        </article>
+    </div>
+</div>
 {% endblock %}
