@@ -2,8 +2,8 @@ from pathlib import Path
 
 
 HOME = Path.home()
-SOURCE_DIR = HOME / "Code" / "website-sources"
-DESTINATION_DIR = HOME / "Code" / "marios-zindilis.github.io"
+SOURCE_DIR = HOME / "Code" / "zindilis.com" / "website-sources"
+DESTINATION_DIR = HOME / "Code" / "zindilis.com" / "marios-zindilis.github.io"
 POSTS_DIR = SOURCE_DIR / "posts"
 FEED_PATH = DESTINATION_DIR / "feeds" / "feed.xml"
 
